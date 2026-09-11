@@ -12,28 +12,32 @@ export function useDashboardData(selectedChildCode?: string, childAttendancePage
     queryKey: ["admin", "dashboard", "summary"],
     queryFn: () => AdminService.getDashboardSummary(),
     enabled: !!showAdminStats,
-    staleTime: 1000 * 30,
+    staleTime: 60_000,
+    gcTime: 300_000,
   });
 
   const enrollments = useQuery({
     queryKey: ["admin", "dashboard", "enrollments"],
-    queryFn: () => AdminService.listEnrollments(true),
+    queryFn: () => AdminService.listEnrollments(true, 1, 10),
     enabled: !!showAdminStats,
-    staleTime: 1000 * 30,
+    staleTime: 60_000,
+    gcTime: 300_000,
   });
 
   const attendance = useQuery({
     queryKey: ["admin", "dashboard", "attendance"],
     queryFn: () => AdminService.listAttendance(14), // Last 14 days for charts
     enabled: !!showAdminStats,
-    staleTime: 1000 * 30,
+    staleTime: 60_000,
+    gcTime: 300_000,
   });
 
   const rooms = useQuery({
     queryKey: ["admin", "dashboard", "rooms"],
     queryFn: () => AdminService.listRooms(),
     enabled: !!showAdminStats,
-    staleTime: 1000 * 30,
+    staleTime: 60_000,
+    gcTime: 300_000,
   });
 
   // Parent Data
@@ -85,7 +89,7 @@ export function useDashboardData(selectedChildCode?: string, childAttendancePage
         enrollments: enrollments.isLoading,
         attendance: attendance.isLoading,
         rooms: rooms.isLoading,
-        overall: summary.isLoading || enrollments.isLoading || attendance.isLoading || rooms.isLoading
+        overall: summary.isLoading && !summary.data
       },
       isFetching: summary.isFetching || enrollments.isFetching || attendance.isFetching || rooms.isFetching,
       error: summary.error || enrollments.error || attendance.error || rooms.error,

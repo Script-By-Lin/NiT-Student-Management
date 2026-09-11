@@ -505,7 +505,8 @@ class AdminPanelService:
         base_query = select(User).where(User.role == "student").options(
             defer(User.address),
             defer(User.password_hash),
-            defer(User.signature)
+            defer(User.signature),
+            defer(User.profile_picture)
         )
         
         # Paginated query
@@ -1398,7 +1399,7 @@ class AdminPanelService:
         if cached is not None:
             return JSONResponse({"status_code": 200, "message": "Dashboard summary fetched successfully", "data": cached})
         
-        # Execute all count queries
+        # Execute count queries cleanly
         stu_q = select(func.count(User.user_id)).where(User.role == "student")
         crs_q = select(func.count(Course.course_id))
         enr_q = select(func.count(Enrollment.enrollment_id)).where(Enrollment.status == True)
@@ -1406,18 +1407,10 @@ class AdminPanelService:
         today = date.today()
         att_q = select(func.count(Attendance.attendance_id)).where(Attendance.attendance_date == today)
         
-        tasks = [
-            session.execute(stu_q),
-            session.execute(crs_q),
-            session.execute(enr_q),
-            session.execute(att_q)
-        ]
-        results = []
-        for t in tasks:
-            res = await t
-            results.append(res.scalar() or 0)
-            
-        total_students, total_courses, active_enrollments, today_attendance = results
+        total_students = (await session.execute(stu_q)).scalar() or 0
+        total_courses = (await session.execute(crs_q)).scalar() or 0
+        active_enrollments = (await session.execute(enr_q)).scalar() or 0
+        today_attendance = (await session.execute(att_q)).scalar() or 0
         
         summary = {
             "total_students": total_students,
@@ -1772,47 +1765,10 @@ class AdminPanelService:
                 exam_paid_gbp[eid] = float(e_gbp or 0)
                 pay_counts[eid] = int(pcount or 0)
 
-        # Fetch profile pictures & signatures separately only for users in this page (avoids loading blob in main join)
-        profile_pictures = {}
-        signatures = {}
-        if enroll_ids and rows:
-            user_ids = list({row[1].user_id for row in rows})
-            pic_q = select(User.user_id, User.profile_picture, User.signature).where(User.user_id.in_(user_ids))
-            pic_res = await session.execute(pic_q)
-            for uid, pic, sig in pic_res:
-                profile_pictures[uid] = pic
-                signatures[uid] = sig
-
-        data = []
-        for e, u, c, b in rows:
-            d = _serialize_enrollment(e)
-            d["student_code"] = u.user_code
-            d["student_name"] = u.username
-            d["course_code"] = c.course_code
-            d["course_name"] = c.course_name
-            d["room"] = getattr(c, "room", None)
-            d["batch_start_date"] = b.start_date.isoformat() if b and b.start_date else None
-            d["batch_end_date"] = b.end_date.isoformat() if b and b.end_date else None
-
-            plan = getattr(e, "payment_plan", None)
-            course_cost = float(getattr(e, "total_fee", 0.0) or (c.fee_full_payment if plan == "full" else (c.fee_installment if plan == "installment" else 0.0)) or 0.0)
-
-            total_paid = pay_sums.get(e.enrollment_id, 0.0)
-            total_discount = pay_discounts.get(e.enrollment_id, 0.0)
-            paid_gbp = exam_paid_gbp.get(e.enrollment_id, 0.0)
-
-            d["course_cost"] = course_cost
-            d["total_paid"] = total_paid
-            d["balance_due"] = max(0.0, course_cost - (total_paid + total_discount))
-            d["exam_fee_paid_gbp"] = paid_gbp
-            d["exam_fee_total_gbp"] = float(getattr(e, "exam_fee_gbp", 0.0) or c.exam_fee_gbp or 0.0)
-            d["exam_fee_pending_gbp"] = max(0.0, d["exam_fee_total_gbp"] - paid_gbp)
-            d["payment_count"] = pay_counts.get(e.enrollment_id, 0)
-
             d["foc_items"] = (c.foc_items_installment if plan == "installment" else c.foc_items)
-            # Profile picture & signature are fetched separately to keep the main join lean
-            d["profile_picture"] = profile_pictures.get(u.user_id)
-            d["signature"] = signatures.get(u.user_id)
+            # Profile picture & signature are deferred from list to keep responses fast and lightweight
+            d["profile_picture"] = None
+            d["signature"] = None
             data.append(d)
 
         response_body = {
@@ -2226,7 +2182,7 @@ class AdminPanelService:
                     "attendance_date": str(a.attendance_date),
                     "slot": a.slot,
                     "check_today": a.check_today,
-                    "profile_picture": u.profile_picture,
+                    "profile_picture": None,
                     "timetable_id": a.timetable_id,
                     "teacher_name": teacher_name,
                     "course_name": course_name,
@@ -3186,7 +3142,6 @@ class AdminPanelService:
             Enrollment.installment_amount,
             User.user_code,
             User.username,
-            User.signature,
             Course.course_name,
             Course.course_code,
             Course.fee_full_payment,
@@ -3229,7 +3184,7 @@ class AdminPanelService:
                 "enrollment_id": row.enrollment_id,
                 "student_code": row.user_code,
                 "student_name": row.username,
-                "signature": row.signature,
+                "signature": None,
                 "course_name": row.course_name,
                 "course_code": row.course_code,
                 "amount": row.amount,

@@ -72,7 +72,7 @@ export default function AdminEnrollmentsPage() {
 
   const createMutation = useCreateEnrollment();
   const deleteMutation = useDeleteEnrollment();
-  const busy = coursesLoading || enrollmentsLoading || createMutation.isPending || deleteMutation.isPending;
+  const busy = createMutation.isPending || deleteMutation.isPending;
 
   const [cStudentCode, setCStudentCode] = useState("");
   const [cCourseCode, setCCourseCode] = useState("");

@@ -658,10 +658,19 @@ export default function AdminPaymentsPage() {
   const handleGenerateReceipt = async (enr: AdminEnrollment, pageSize: "a4" | "a5" = "a4") => {
     setBusy(true);
     try {
+      let enrWithSig = enr;
+      if (!enr.signature && enr.student_code) {
+        try {
+          const stu = await AdminService.getStudent(enr.student_code);
+          if (stu?.signature) {
+            enrWithSig = { ...enr, signature: stu.signature };
+          }
+        } catch {}
+      }
       const res = await AdminService.listPayments(1, 100, enr.enrollment_id);
       const enrPayments = res.data;
       generateReceiptPDF(
-        enr,
+        enrWithSig,
         enrPayments,
         calculateLeftAmount(enr),
         calculateLeftExamFeeGbp(enr),
@@ -673,6 +682,25 @@ export default function AdminPaymentsPage() {
       toast.error("Failed to load payment data for receipt");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handlePrintPaymentReceipt = async (enr: AdminEnrollment, p: AdminPayment, isFirstPayment: boolean = false) => {
+    try {
+      let enrWithSig = enr;
+      if (!enr.signature && enr.student_code) {
+        try {
+          const stu = await AdminService.getStudent(enr.student_code);
+          if (stu?.signature) {
+            enrWithSig = { ...enr, signature: stu.signature };
+          }
+        } catch {}
+      }
+      const leftExamGbp = calculateLeftExamFeeGbp(enr);
+      const leftAmountAtTime = calculateLeftAmount(enr);
+      generateReceiptPDF(enrWithSig, [p], leftAmountAtTime, leftExamGbp, user?.username || "Admin", isFirstPayment);
+    } catch (err) {
+      toast.error("Failed to generate payment receipt");
     }
   };
 
@@ -1851,9 +1879,9 @@ export default function AdminPaymentsPage() {
                           <div className="flex items-center gap-1.5 sm:self-start">
                             <button
                               onClick={() => {
-                                const leftExamGbp = calculateLeftExamFeeGbp(selectedEnrollment);
-                                const leftAmountAtTime = calculateLeftAmount(selectedEnrollment);
-                                generateReceiptPDF(selectedEnrollment, [p], leftAmountAtTime, leftExamGbp, user?.username || "Admin", isFirstPayment);
+                                if (selectedEnrollment) {
+                                  handlePrintPaymentReceipt(selectedEnrollment, p, isFirstPayment);
+                                }
                               }}
                               className="h-10 px-4 rounded-xl bg-white border border-slate-200 text-brand-600 font-bold text-xs flex items-center gap-2 hover:bg-brand-50 transition-colors shadow-sm active:scale-95"
                               title="Download Receipt"

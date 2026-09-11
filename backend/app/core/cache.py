@@ -1,15 +1,20 @@
+from collections import OrderedDict
 import json
 import logging
+import time
 from typing import Any, Optional
 import redis.asyncio as redis
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+MAX_LOCAL_ITEMS = 1000  # Cap in-memory fallback to avoid memory leaks
+
+
 class CacheManager:
     _instance: Optional['CacheManager'] = None
     _client: Optional[redis.Redis] = None
-    _local_cache: dict = {}
+    _local_cache: OrderedDict = OrderedDict()
 
     def __new__(cls):
         if cls._instance is None:
@@ -32,7 +37,7 @@ class CacheManager:
             await self._client.ping()
             logger.info("Successfully connected to Redis cache")
         except Exception as e:
-            logger.warning(f"Failed to connect to Redis: {e}. Falling back to in-memory cache.")
+            logger.warning(f"Failed to connect to Redis: {e}. Falling back to in-memory LRU cache.")
             self._client = None
 
     async def get(self, key: str) -> Optional[Any]:
@@ -44,13 +49,14 @@ class CacheManager:
                 data = await self._client.get(key)
                 return json.loads(data) if data else None
             
-            # Local cache with TTL
+            # Local LRU cache with TTL
             if key in self._local_cache:
                 val, expires = self._local_cache[key]
-                import time
                 if expires < time.time():
                     del self._local_cache[key]
                     return None
+                # Mark as Most Recently Used
+                self._local_cache.move_to_end(key)
                 return val
             return None
         except Exception as e:
@@ -66,8 +72,21 @@ class CacheManager:
                 serialized = json.dumps(value)
                 await self._client.set(key, serialized, ex=expire)
             else:
-                import time
-                self._local_cache[key] = (value, time.time() + expire)
+                # Evict expired entries if local cache is getting full
+                now = time.time()
+                if len(self._local_cache) >= MAX_LOCAL_ITEMS:
+                    # Quick prune of expired keys
+                    expired_keys = [k for k, (_, exp) in list(self._local_cache.items()) if exp < now]
+                    for k in expired_keys:
+                        del self._local_cache[k]
+                
+                # If still over limit, pop the Least Recently Used item
+                while len(self._local_cache) >= MAX_LOCAL_ITEMS:
+                    self._local_cache.popitem(last=False)
+                
+                if key in self._local_cache:
+                    del self._local_cache[key]
+                self._local_cache[key] = (value, now + expire)
         except Exception as e:
             logger.error(f"Cache set error for key {key}: {e}")
 
@@ -87,7 +106,7 @@ class CacheManager:
         """Delete all cache keys matching a glob pattern (e.g. 'enrollment:list:*').
         
         Uses Redis SCAN for atomic pattern-based deletion in Redis mode.
-        Falls back to prefix matching on the in-memory dict.
+        Falls back to prefix matching on the in-memory OrderedDict.
         """
         if not settings.ENABLE_CACHE:
             return
@@ -121,3 +140,4 @@ class CacheManager:
             await self._client.close()
 
 cache_manager = CacheManager()
+

@@ -105,18 +105,21 @@ class BackupService:
             (JournalEntry, "JournalEntries"),
             (JournalEntryLine, "JournalEntryLines")
         ]
-
+        from sqlalchemy.orm import defer
         # Fetch and prepare all data first to avoid database queries inside the ExcelWriter block,
         # which would trigger openpyxl IndexErrors upon exception cleanup.
         exported_sheets = {}
         for model, sheet_name in models:
-            result = await session.execute(select(model))
+            stmt = select(model)
+            if model == User:
+                stmt = stmt.options(defer(User.profile_picture), defer(User.signature))
+            result = await session.execute(stmt)
             items = result.scalars().all()
             
             # Convert to list of dicts
             data = []
             for item in items:
-                d = {c.name: getattr(item, c.name) for c in model.__table__.columns}
+                d = {c.name: getattr(item, c.name) for c in model.__table__.columns if c.name not in ("profile_picture", "signature")}
                 # Convert datetimes and dates to strings
                 from datetime import date as py_date
                 for k, v in d.items():

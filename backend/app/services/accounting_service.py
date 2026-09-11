@@ -2,6 +2,7 @@ from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func, or_
+from sqlalchemy.orm import selectinload, joinedload
 from datetime import date, datetime
 from typing import Optional, List
 from app.models.model import Account, JournalEntry, JournalEntryLine, Expense, User
@@ -12,27 +13,30 @@ class AccountingService:
 
     @staticmethod
     async def list_accounts(session: AsyncSession) -> List[dict]:
-        """Returns all accounts with their current balances."""
-        q = select(Account)
+        """Returns all accounts with their current balances using a single bulk aggregation query."""
+        q = select(Account).order_by(Account.account_id.asc())
         res = await session.execute(q)
         accounts = res.scalars().all()
         
+        # Single bulk query for all account sums across all journal entry lines
+        lines_q = select(
+            JournalEntryLine.account_id,
+            func.sum(JournalEntryLine.debit_mmk).label("deb_mmk"),
+            func.sum(JournalEntryLine.credit_mmk).label("cred_mmk"),
+            func.sum(JournalEntryLine.debit_gbp).label("deb_gbp"),
+            func.sum(JournalEntryLine.credit_gbp).label("cred_gbp")
+        ).group_by(JournalEntryLine.account_id)
+        
+        lines_res = await session.execute(lines_q)
+        sums_by_acc = {row.account_id: row for row in lines_res}
+        
         data = []
         for acc in accounts:
-            # Calculate debit/credit sums for MMK and GBP
-            lines_q = select(
-                func.sum(JournalEntryLine.debit_mmk).label("deb_mmk"),
-                func.sum(JournalEntryLine.credit_mmk).label("cred_mmk"),
-                func.sum(JournalEntryLine.debit_gbp).label("deb_gbp"),
-                func.sum(JournalEntryLine.credit_gbp).label("cred_gbp")
-            ).where(JournalEntryLine.account_id == acc.account_id)
-            lines_res = await session.execute(lines_q)
-            sums = lines_res.first()
-            
-            deb_mmk = sums.deb_mmk or 0.0
-            cred_mmk = sums.cred_mmk or 0.0
-            deb_gbp = sums.deb_gbp or 0.0
-            cred_gbp = sums.cred_gbp or 0.0
+            sums = sums_by_acc.get(acc.account_id)
+            deb_mmk = (sums.deb_mmk if sums else 0.0) or 0.0
+            cred_mmk = (sums.cred_mmk if sums else 0.0) or 0.0
+            deb_gbp = (sums.deb_gbp if sums else 0.0) or 0.0
+            cred_gbp = (sums.cred_gbp if sums else 0.0) or 0.0
             
             # Net balance calculations based on account type
             # Asset/Expense: debit - credit
@@ -119,8 +123,15 @@ class AccountingService:
 
     @staticmethod
     async def list_journal_entries(session: AsyncSession, start_date: Optional[str] = None, end_date: Optional[str] = None) -> List[dict]:
-        """Lists all journal entries with lines."""
-        q = select(JournalEntry).order_by(JournalEntry.entry_date.desc(), JournalEntry.entry_id.desc())
+        """Lists all journal entries with lines using eager loading to prevent N+1 queries."""
+        q = (
+            select(JournalEntry)
+            .options(
+                selectinload(JournalEntry.lines).joinedload(JournalEntryLine.account),
+                joinedload(JournalEntry.student)
+            )
+            .order_by(JournalEntry.entry_date.desc(), JournalEntry.entry_id.desc())
+        )
         if start_date:
             q = q.where(JournalEntry.entry_date >= datetime.strptime(start_date, "%Y-%m-%d").date())
         if end_date:
@@ -131,19 +142,12 @@ class AccountingService:
         
         data = []
         for entry in entries:
-            lines_q = select(JournalEntryLine).where(JournalEntryLine.entry_id == entry.entry_id)
-            lines_res = await session.execute(lines_q)
-            lines = lines_res.scalars().all()
-            
             lines_data = []
-            for l in lines:
-                acc_q = select(Account).where(Account.account_id == l.account_id)
-                acc_res = await session.execute(acc_q)
-                acc = acc_res.scalars().first()
+            for l in (entry.lines or []):
                 lines_data.append({
                     "line_id": l.line_id,
                     "account_id": l.account_id,
-                    "account_name": acc.account_name if acc else "Unknown",
+                    "account_name": l.account.account_name if l.account else "Unknown",
                     "debit_mmk": l.debit_mmk,
                     "credit_mmk": l.credit_mmk,
                     "debit_gbp": l.debit_gbp,
@@ -151,12 +155,8 @@ class AccountingService:
                 })
                 
             student_name = None
-            if entry.student_id:
-                stu_q = select(User).where(User.user_id == entry.student_id)
-                stu_res = await session.execute(stu_q)
-                student = stu_res.scalars().first()
-                if student:
-                    student_name = f"{student.username} ({student.user_code})"
+            if entry.student:
+                student_name = f"{entry.student.username} ({entry.student.user_code})"
                     
             data.append({
                 "entry_id": entry.entry_id,

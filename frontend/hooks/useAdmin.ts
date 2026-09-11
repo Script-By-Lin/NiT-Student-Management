@@ -27,6 +27,8 @@ export function useStudents(page: number = 1, limit: number = 50) {
   return useQuery({
     queryKey: [...adminKeys.students(), page, limit],
     queryFn: () => AdminService.listStudents(page, limit),
+    staleTime: 30_000,
+    gcTime: 120_000,
   });
 }
 
@@ -35,6 +37,8 @@ export function useStudent(code: string) {
     queryKey: adminKeys.student(code),
     queryFn: () => AdminService.getStudent(code),
     enabled: !!code,
+    staleTime: 60_000,
+    gcTime: 300_000,
   });
 }
 
@@ -42,6 +46,8 @@ export function useAcademicYears() {
   return useQuery({
     queryKey: adminKeys.academicYears(),
     queryFn: () => AdminService.listAcademicYears(),
+    staleTime: 300_000, // 5 min
+    gcTime: 600_000,
   });
 }
 
@@ -49,8 +55,8 @@ export function useCourses(page: number = 1, limit: number = 50) {
   return useQuery({
     queryKey: [...adminKeys.courses(), page, limit],
     queryFn: () => AdminService.listCourses(page, limit),
-    staleTime: 60_000,  // Courses rarely change; cache for 1 minute
-    gcTime: 300_000,    // Keep in memory for 5 minutes
+    staleTime: 300_000, // Courses rarely change; cache for 5 minutes
+    gcTime: 600_000,   // Keep in memory for 10 minutes
   });
 }
 
@@ -58,7 +64,7 @@ export function useActivityLogs(page: number = 1, limit: number = 50) {
   return useQuery({
     queryKey: [...adminKeys.activityLogs(), page, limit],
     queryFn: () => AdminService.getActivityLogs(page, limit),
-    refetchInterval: 5000, // Auto-refresh every 5 seconds to display logs without page reload
+    refetchInterval: 15_000, // Auto-refresh every 15s to reduce GC pressure
   });
 }
 
@@ -66,8 +72,8 @@ export function useEnrollments(status?: boolean, page: number = 1, limit: number
   return useQuery({
     queryKey: [...adminKeys.enrollments(), status, page, limit],
     queryFn: () => AdminService.listEnrollments(status, page, limit),
-    staleTime: 30_000,  // Keep data fresh for 30s; prevents refetch on window focus
-    gcTime: 120_000,    // Keep in garbage-collection memory for 2 minutes
+    staleTime: 60_000,  // Keep data fresh for 60s
+    gcTime: 300_000,    // Keep in memory for 5 minutes
   });
 }
 
@@ -75,6 +81,8 @@ export function useParents(page: number = 1, limit: number = 50) {
   return useQuery({
     queryKey: [...adminKeys.parents(), page, limit],
     queryFn: () => AdminService.listParents(page, limit),
+    staleTime: 60_000,
+    gcTime: 300_000,
   });
 }
 
@@ -82,20 +90,26 @@ export function useTeachers(page: number = 1, limit: number = 50) {
   return useQuery({
     queryKey: [...adminKeys.teachers(), page, limit],
     queryFn: () => AdminService.listTeachers(page, limit),
+    staleTime: 60_000,
+    gcTime: 300_000,
   });
 }
 
-export function usePayments(page: number = 1, limit: number = 50) {
+export function usePayments(page: number = 1, limit: number = 50, enrollmentId?: number, studentId?: number, receiptId?: string) {
   return useQuery({
-    queryKey: [...adminKeys.payments(), page, limit],
-    queryFn: () => AdminService.listPayments(page, limit),
+    queryKey: [...adminKeys.payments(), page, limit, enrollmentId, studentId, receiptId],
+    queryFn: () => AdminService.listPayments(page, limit, enrollmentId, studentId, receiptId),
+    staleTime: 60_000,
+    gcTime: 300_000,
   });
 }
 
-export function useAttendance() {
+export function useAttendance(days?: number) {
   return useQuery({
-    queryKey: adminKeys.attendance(),
-    queryFn: () => AdminService.listAttendance(),
+    queryKey: [...adminKeys.attendance(), days],
+    queryFn: () => AdminService.listAttendance(days),
+    staleTime: 30_000,
+    gcTime: 120_000,
   });
 }
 
@@ -103,6 +117,8 @@ export function useTimetables() {
   return useQuery({
     queryKey: adminKeys.timetables(),
     queryFn: () => AdminService.listTimetables(),
+    staleTime: 60_000,
+    gcTime: 300_000,
   });
 }
 
@@ -110,7 +126,8 @@ export function useBatches(courseId?: number) {
   return useQuery({
     queryKey: adminKeys.batches(courseId),
     queryFn: () => AdminService.listBatches(courseId),
-    staleTime: 60_000,  // Batches rarely change mid-session
+    enabled: courseId !== undefined ? !!courseId : true,
+    staleTime: 120_000,
     gcTime: 300_000,
   });
 }

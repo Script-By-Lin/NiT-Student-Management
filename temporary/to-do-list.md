@@ -1,20 +1,27 @@
-# To-Do List: Performance Optimization for Enrollments, Rooms, and Students
+# To-Do List: Performance Optimization & Memory Reduction
 
-- [x] 1. Optimize Rooms Service (`list_rooms` & `get_room_availability`)
-  - [x] Replace N+1 query loop with bulk `GROUP BY` aggregation query for enrollment loads
-  - [x] Bulk fetch timetable room pairs and default course room assignments
-  - [x] Add caching for `list_rooms` (`rooms:list`, 60s TTL)
-  - [x] Add cache invalidation for `rooms:list` on room, timetable, and enrollment mutations
+- [x] 1. In-Memory Cache Optimization (Memory Leak Prevention)
+  - [x] Implement LRU cache with `OrderedDict` and `maxsize=1000` in `backend/app/core/cache.py`
+  - [x] Add eviction on set and automatic expired key cleanup
 
-- [x] 2. Optimize Students Service (`get_students_details` & cache invalidation)
-  - [x] Add pagination caching for `get_students_details` (`students:list:{page}:{limit}`, 60s TTL)
-  - [x] Defer heavy text columns (`User.signature`, `User.address`, `User.password_hash`) on list queries
-  - [x] Invalidate `students:list:*` on student creation, update, deletion, approval, and registration
+- [x] 2. Backend Service Optimizations & Blob Deferrals
+  - [x] Defer `User.profile_picture` in `get_students_details` (`backend/app/services/admin_panel.py`)
+  - [x] Remove explicit Base64 photo & signature queries in `list_enrollments` (`backend/app/services/admin_panel.py`)
+  - [x] Remove `profile_picture` serialization from every attendance row in `get_all_attendance` (`backend/app/services/admin_panel.py`)
+  - [x] Remove `User.signature` from `list_payments` query (`backend/app/services/admin_panel.py`)
+  - [x] Optimize `get_dashboard_summary` sequential scalar queries (`backend/app/services/admin_panel.py`)
 
-- [x] 3. Optimize Enrollments Service & Invalidation
-  - [x] Ensure `enrollment:list:*` cache is invalidated consistently across student creation with auto-enrollment, approvals, and mutations
+- [x] 3. Accounting & Backup Optimization
+  - [x] Replace N+1 queries in `list_accounts` with a single `GROUP BY` query (`backend/app/services/accounting_service.py`)
+  - [x] Eager load journal entry relations in `list_journal_entries` (`backend/app/services/accounting_service.py`)
+  - [x] Defer large Base64 blobs during Excel export in `backend/app/services/backup_service.py`
 
-- [x] 4. Verification & Testing
-  - [x] Run backend unit tests (`pytest`)
-  - [x] Verify Python syntax compilation
+- [x] 4. Frontend Data Fetching & Perceived Speed
+  - [x] Decouple dashboard loading states in `frontend/hooks/useDashboardData.ts`
+  - [x] Increase `staleTime` and `gcTime` on `useCourses` and `useAcademicYears` in `frontend/hooks/useAdmin.ts`
+  - [x] Ensure on-demand student signature loading for PDF receipts in `frontend/app/(portal)/admin/payments/page.tsx`
+  - [x] Remove UI blocking on course dropdowns in `frontend/app/(portal)/admin/enrollments/page.tsx`
+
+- [x] 5. Verification & Testing
+  - [x] Verify Python syntax compilation (`py_compile`)
   - [x] Verify frontend build (`npm run build`)
