@@ -201,42 +201,64 @@ async def _create_journal_entry_for_payment(session: AsyncSession, pay: Payment)
     await session.flush()
 
 
+def _safe_get(obj: Any, key: str, default: Any = None) -> Any:
+    """
+    Safely retrieve an attribute or column value from a model instance or dict
+    without triggering SQLAlchemy async lazy-load descriptors (MissingGreenlet).
+    """
+    if obj is None:
+        return default
+    if isinstance(obj, dict):
+        val = obj.get(key)
+        return val if val is not None else default
+    d = getattr(obj, "__dict__", None)
+    if isinstance(d, dict) and key in d:
+        val = d[key]
+        return val if val is not None else default
+    return default
+
+
 def _serialize_user_lite(u: User) -> dict:
+    dob = _safe_get(u, "data_of_birth")
+    created = _safe_get(u, "created_at")
     return {
-        "user_id": u.user_id,
-        "user_code": u.user_code,
-        "username": u.username,
-        "email": u.email,
-        "role": u.role,
-        "is_active": u.is_active,
-        "phone": getattr(u, "phone", None),
-        "data_of_birth": u.data_of_birth.isoformat() if getattr(u, "data_of_birth", None) else None,
-        "profile_picture": getattr(u, "profile_picture", None),
-        "created_at": f"{u.created_at.isoformat()}Z" if getattr(u, "created_at", None) else None,
+        "user_id": _safe_get(u, "user_id"),
+        "user_code": _safe_get(u, "user_code"),
+        "username": _safe_get(u, "username"),
+        "email": _safe_get(u, "email"),
+        "role": _safe_get(u, "role"),
+        "is_active": _safe_get(u, "is_active", True),
+        "phone": _safe_get(u, "phone"),
+        "data_of_birth": dob.isoformat() if dob else None,
+        "profile_picture": _safe_get(u, "profile_picture"),
+        "created_at": f"{created.isoformat()}Z" if created else None,
     }
 
 def _serialize_user(u: User) -> dict:
+    dob = _safe_get(u, "data_of_birth")
+    created = _safe_get(u, "created_at")
+    updated = _safe_get(u, "updated_at")
     return {
-        "user_id": u.user_id,
-        "user_code": u.user_code,
-        "username": u.username,
-        "email": u.email,
-        "role": u.role,
-        "is_active": u.is_active,
-        "nrc": getattr(u, "nrc", None),
-        "gender": getattr(u, "gender", None),
-        "phone": getattr(u, "phone", None),
-        "parent_name": getattr(u, "parent_name", None),
-        "parent_phone": getattr(u, "parent_phone", None),
-        "address": getattr(u, "address", None),
-        "profile_picture": getattr(u, "profile_picture", None),
-        "signature": getattr(u, "signature", None),
-        "data_of_birth": u.data_of_birth.isoformat() if getattr(u, "data_of_birth", None) else None,
-        "how_did_you_hear": getattr(u, "how_did_you_hear", None),
-        "student_type": getattr(u, "student_type", None),
-        "intended_course_code": getattr(u, "intended_course_code", None),
-        "created_at": f"{u.created_at.isoformat()}Z" if getattr(u, "created_at", None) else None,
-        "updated_at": f"{u.updated_at.isoformat()}Z" if getattr(u, "updated_at", None) else None,
+        "user_id": _safe_get(u, "user_id"),
+        "user_code": _safe_get(u, "user_code"),
+        "username": _safe_get(u, "username"),
+        "email": _safe_get(u, "email"),
+        "role": _safe_get(u, "role"),
+        "is_active": _safe_get(u, "is_active", True),
+        "nrc": _safe_get(u, "nrc"),
+        "gender": _safe_get(u, "gender"),
+        "phone": _safe_get(u, "phone"),
+        "parent_name": _safe_get(u, "parent_name"),
+        "parent_phone": _safe_get(u, "parent_phone"),
+        "address": _safe_get(u, "address"),
+        "profile_picture": _safe_get(u, "profile_picture"),
+        "signature": _safe_get(u, "signature"),
+        "data_of_birth": dob.isoformat() if dob else None,
+        "how_did_you_hear": _safe_get(u, "how_did_you_hear"),
+        "student_type": _safe_get(u, "student_type"),
+        "intended_course_code": _safe_get(u, "intended_course_code"),
+        "created_at": f"{created.isoformat()}Z" if created else None,
+        "updated_at": f"{updated.isoformat()}Z" if updated else None,
     }
 
 
@@ -332,81 +354,89 @@ async def _next_enrollment_code(session: AsyncSession) -> str:
 
 
 def _serialize_academic_year(y: AcademicYear) -> dict:
+    s_date = _safe_get(y, "start_date")
+    e_date = _safe_get(y, "end_date")
     return {
-        "academic_year_id": y.academic_year_id,
-        "academic_year_name": y.academic_year_name,
-        "start_date": y.start_date.isoformat() if y.start_date else None,
-        "end_date": y.end_date.isoformat() if y.end_date else None,
+        "academic_year_id": _safe_get(y, "academic_year_id"),
+        "academic_year_name": _safe_get(y, "academic_year_name"),
+        "start_date": s_date.isoformat() if s_date else None,
+        "end_date": e_date.isoformat() if e_date else None,
     }
 
 
 def _serialize_course(c: Course) -> dict:
     return {
-        "course_id": c.course_id,
-        "course_code": c.course_code,
-        "course_name": c.course_name,
-        "academic_year_id": c.academicyear_id,
-        "instructor_id": c.instructor_id,
-        "fee_full_payment": getattr(c, "fee_full_payment", None),
-        "fee_installment": getattr(c, "fee_installment", None),
-        "exam_fee_gbp": getattr(c, "exam_fee_gbp", None),
-        "foc_items": getattr(c, "foc_items", None),
-        "foc_items_installment": getattr(c, "foc_items_installment", None),
-        "discount": getattr(c, "discount", 0.0),
-        "category": getattr(c, "category", None),
+        "course_id": _safe_get(c, "course_id"),
+        "course_code": _safe_get(c, "course_code"),
+        "course_name": _safe_get(c, "course_name"),
+        "academic_year_id": _safe_get(c, "academicyear_id"),
+        "instructor_id": _safe_get(c, "instructor_id"),
+        "fee_full_payment": _safe_get(c, "fee_full_payment"),
+        "fee_installment": _safe_get(c, "fee_installment"),
+        "exam_fee_gbp": _safe_get(c, "exam_fee_gbp"),
+        "foc_items": _safe_get(c, "foc_items"),
+        "foc_items_installment": _safe_get(c, "foc_items_installment"),
+        "discount": _safe_get(c, "discount", 0.0),
+        "category": _safe_get(c, "category"),
     }
 
 
 def _serialize_batch(b: Batch) -> dict:
+    s_date = _safe_get(b, "start_date")
+    e_date = _safe_get(b, "end_date")
     return {
-        "batch_id": b.batch_id,
-        "batch_no": b.batch_no,
-        "course_id": b.course_id,
-        "start_date": b.start_date.isoformat() if b.start_date else None,
-        "end_date": b.end_date.isoformat() if b.end_date else None,
-        "room": b.room,
-        "instructor_id": b.instructor_id,
-        "is_active": b.is_active,
+        "batch_id": _safe_get(b, "batch_id"),
+        "batch_no": _safe_get(b, "batch_no"),
+        "course_id": _safe_get(b, "course_id"),
+        "start_date": s_date.isoformat() if s_date else None,
+        "end_date": e_date.isoformat() if e_date else None,
+        "room": _safe_get(b, "room"),
+        "instructor_id": _safe_get(b, "instructor_id"),
+        "is_active": _safe_get(b, "is_active", True),
     }
 
 
 def _serialize_subject(s: Subject) -> dict:
+    created = _safe_get(s, "created_at")
     return {
-        "subject_id": s.subject_id,
-        "subject_code": s.subject_code,
-        "subject_name": s.subject_name,
-        "course_id": s.course_id,
-        "is_active": s.is_active,
-        "created_at": f"{s.created_at.isoformat()}Z" if getattr(s, "created_at", None) else None,
+        "subject_id": _safe_get(s, "subject_id"),
+        "subject_code": _safe_get(s, "subject_code"),
+        "subject_name": _safe_get(s, "subject_name"),
+        "course_id": _safe_get(s, "course_id"),
+        "is_active": _safe_get(s, "is_active", True),
+        "created_at": f"{created.isoformat()}Z" if created else None,
     }
 
 
 def _serialize_enrollment(e: Enrollment) -> dict:
+    enr_date = _safe_get(e, "enrollment_date")
     return {
-        "enrollment_id": e.enrollment_id,
-        "enrollment_code": e.enrollment_code,
-        "student_id": e.student_id,
-        "course_id": e.course_id,
-        "batch_id": e.batch_id,
-        "enrollment_date": f"{e.enrollment_date.isoformat()}Z" if getattr(e, "enrollment_date", None) else None,
-        "status": bool(e.status),
-        "batch_no": getattr(e, "batch_no", None),
-        "payment_plan": getattr(e, "payment_plan", None),
-        "downpayment": getattr(e, "downpayment", None),
-        "installment_amount": getattr(e, "installment_amount", None),
-        "total_fee": getattr(e, "total_fee", None),
-        "exam_fee_gbp": getattr(e, "exam_fee_gbp", None),
+        "enrollment_id": _safe_get(e, "enrollment_id"),
+        "enrollment_code": _safe_get(e, "enrollment_code"),
+        "student_id": _safe_get(e, "student_id"),
+        "course_id": _safe_get(e, "course_id"),
+        "batch_id": _safe_get(e, "batch_id"),
+        "enrollment_date": f"{enr_date.isoformat()}Z" if enr_date else None,
+        "status": bool(_safe_get(e, "status", False)),
+        "batch_no": _safe_get(e, "batch_no"),
+        "payment_plan": _safe_get(e, "payment_plan"),
+        "downpayment": _safe_get(e, "downpayment"),
+        "installment_amount": _safe_get(e, "installment_amount"),
+        "total_fee": _safe_get(e, "total_fee"),
+        "exam_fee_gbp": _safe_get(e, "exam_fee_gbp"),
     }
 
 
 def _serialize_room(r: Room) -> dict:
+    created = _safe_get(r, "created_at")
+    updated = _safe_get(r, "updated_at")
     return {
-        "room_id": r.room_id,
-        "room_name": r.room_name,
-        "capacity": r.capacity,
-        "is_active": r.is_active,
-        "created_at": f"{r.created_at.isoformat()}Z" if getattr(r, "created_at", None) else None,
-        "updated_at": f"{r.updated_at.isoformat()}Z" if getattr(r, "updated_at", None) else None,
+        "room_id": _safe_get(r, "room_id"),
+        "room_name": _safe_get(r, "room_name"),
+        "capacity": _safe_get(r, "capacity"),
+        "is_active": _safe_get(r, "is_active", True),
+        "created_at": f"{created.isoformat()}Z" if created else None,
+        "updated_at": f"{updated.isoformat()}Z" if updated else None,
     }
 
 

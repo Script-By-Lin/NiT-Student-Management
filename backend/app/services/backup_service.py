@@ -119,7 +119,8 @@ class BackupService:
             # Convert to list of dicts
             data = []
             for item in items:
-                d = {c.name: getattr(item, c.name) for c in model.__table__.columns if c.name not in ("profile_picture", "signature")}
+                item_dict = getattr(item, "__dict__", {})
+                d = {c.name: item_dict.get(c.name) for c in model.__table__.columns if c.name not in ("profile_picture", "signature")}
                 # Convert datetimes and dates to strings
                 from datetime import date as py_date
                 for k, v in d.items():
