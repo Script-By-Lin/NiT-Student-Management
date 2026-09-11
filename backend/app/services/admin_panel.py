@@ -1765,6 +1765,32 @@ class AdminPanelService:
                 exam_paid_gbp[eid] = float(e_gbp or 0)
                 pay_counts[eid] = int(pcount or 0)
 
+        data = []
+        for e, u, c, b in rows:
+            d = _serialize_enrollment(e)
+            d["student_code"] = u.user_code
+            d["student_name"] = u.username
+            d["course_code"] = c.course_code
+            d["course_name"] = c.course_name
+            d["room"] = getattr(c, "room", None)
+            d["batch_start_date"] = b.start_date.isoformat() if b and b.start_date else None
+            d["batch_end_date"] = b.end_date.isoformat() if b and b.end_date else None
+
+            plan = getattr(e, "payment_plan", None)
+            course_cost = float(getattr(e, "total_fee", 0.0) or (c.fee_full_payment if plan == "full" else (c.fee_installment if plan == "installment" else 0.0)) or 0.0)
+
+            total_paid = pay_sums.get(e.enrollment_id, 0.0)
+            total_discount = pay_discounts.get(e.enrollment_id, 0.0)
+            paid_gbp = exam_paid_gbp.get(e.enrollment_id, 0.0)
+
+            d["course_cost"] = course_cost
+            d["total_paid"] = total_paid
+            d["balance_due"] = max(0.0, course_cost - (total_paid + total_discount))
+            d["exam_fee_paid_gbp"] = paid_gbp
+            d["exam_fee_total_gbp"] = float(getattr(e, "exam_fee_gbp", 0.0) or c.exam_fee_gbp or 0.0)
+            d["exam_fee_pending_gbp"] = max(0.0, d["exam_fee_total_gbp"] - paid_gbp)
+            d["payment_count"] = pay_counts.get(e.enrollment_id, 0)
+
             d["foc_items"] = (c.foc_items_installment if plan == "installment" else c.foc_items)
             # Profile picture & signature are deferred from list to keep responses fast and lightweight
             d["profile_picture"] = None
