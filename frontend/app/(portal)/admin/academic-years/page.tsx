@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { AdminAcademicYear, AdminService } from "@/services/admin.service";
 import { Plus, Search, Trash2, Pencil, RefreshCw, X, Download } from "lucide-react";
 import { exportToExcel } from "@/utils/excelExport";
+import { toast } from "sonner";
 
 
 function Modal({
@@ -103,9 +104,12 @@ export default function AdminAcademicYearsPage() {
     try {
       await AdminService.createAcademicYear({ academic_year_name: cName.trim(), start_date: cStart, end_date: cEnd });
       setCreateOpen(false);
+      toast.success("Academic year created successfully");
       await load();
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.response?.data?.message || "Failed to create academic year");
+      const msg = e?.response?.data?.detail || e?.response?.data?.message || "Failed to create academic year";
+      toast.error(msg);
+      setError(msg);
     } finally {
       setBusy(false);
     }
@@ -131,9 +135,12 @@ export default function AdminAcademicYearsPage() {
       });
       setEditOpen(false);
       setSelected(null);
+      toast.success("Academic year updated successfully");
       await load();
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.response?.data?.message || "Failed to update academic year");
+      const msg = e?.response?.data?.detail || e?.response?.data?.message || "Failed to update academic year";
+      toast.error(msg);
+      setError(msg);
     } finally {
       setBusy(false);
     }
@@ -146,9 +153,12 @@ export default function AdminAcademicYearsPage() {
     setError("");
     try {
       await AdminService.deleteAcademicYear(y.academic_year_id);
+      toast.success("Academic year deleted successfully");
       await load();
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.response?.data?.message || "Failed to delete academic year");
+      const msg = e?.response?.data?.detail || e?.response?.data?.message || "Failed to delete academic year";
+      toast.error(msg);
+      setError(msg);
     } finally {
       setBusy(false);
     }

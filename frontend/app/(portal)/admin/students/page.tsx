@@ -447,6 +447,7 @@ export default function AdminStudentsPage() {
         exam_fee_gbp: cExamFeeGbp !== "" ? Number(cExamFeeGbp) : null,
       });
       setCreateOpen(false);
+      toast.success("Student created successfully");
     } catch (e: any) {
       handleError(e, "Failed to create student");
     }
@@ -546,6 +547,7 @@ export default function AdminStudentsPage() {
       });
       setEditOpen(false);
       setSelected(null);
+      toast.success("Student updated successfully");
     } catch (e: any) {
       handleError(e, "Failed to update student");
     }
@@ -560,6 +562,7 @@ export default function AdminStudentsPage() {
     setError("");
     try {
       await deleteMutation.mutateAsync(studentToDelete.user_code);
+      toast.success("Student deleted successfully");
     } catch (e: any) {
       handleError(e, "Failed to delete student");
     } finally {
@@ -596,6 +599,7 @@ export default function AdminStudentsPage() {
       const updated = await AdminService.getStudentRelations(selected.user_code);
       setRelations(updated);
       setEnrollEditOpen(false);
+      toast.success("Enrollment updated successfully");
     } catch (e: any) {
       handleError(e, "Failed to update enrollment");
     } finally {
@@ -623,6 +627,7 @@ export default function AdminStudentsPage() {
         }
       });
       setApproveOpen(false);
+      toast.success("Student approved successfully");
       await load();
     } catch (e: any) {
       handleError(e, "Failed to approve student");

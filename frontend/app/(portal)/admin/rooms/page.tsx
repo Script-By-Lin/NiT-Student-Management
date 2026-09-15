@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { AdminRoom, AdminService, RoomAvailability } from "@/services/admin.service";
 import { Plus, Search, Trash2, Pencil, RefreshCw, X, Clock, AlertCircle } from "lucide-react";
 import ConfirmModal from "@/components/ConfirmModal";
+import { toast } from "sonner";
 
 function Modal({
   title,
@@ -119,9 +120,12 @@ export default function AdminRoomsPage() {
     try {
       await AdminService.createRoom({ room_name: cName.trim(), capacity: cCapacity, is_active: cActive });
       setCreateOpen(false);
+      toast.success("Room created successfully");
       await load();
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.response?.data?.message || "Failed to create room");
+      const msg = e?.response?.data?.detail || e?.response?.data?.message || "Failed to create room";
+      toast.error(msg);
+      setError(msg);
     } finally {
       setBusy(false);
     }
@@ -143,9 +147,12 @@ export default function AdminRoomsPage() {
       await AdminService.updateRoom(selected.room_id, { room_name: eName.trim(), capacity: eCapacity, is_active: eActive });
       setEditOpen(false);
       setSelected(null);
+      toast.success("Room updated successfully");
       await load();
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.response?.data?.message || "Failed to update room");
+      const msg = e?.response?.data?.detail || e?.response?.data?.message || "Failed to update room";
+      toast.error(msg);
+      setError(msg);
     } finally {
       setBusy(false);
     }
@@ -161,9 +168,12 @@ export default function AdminRoomsPage() {
     setError("");
     try {
       await AdminService.deleteRoom(roomToDelete.room_id);
+      toast.success("Room deleted successfully");
       await load();
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.response?.data?.message || "Failed to delete room");
+      const msg = e?.response?.data?.detail || e?.response?.data?.message || "Failed to delete room";
+      toast.error(msg);
+      setError(msg);
     } finally {
       setBusy(false);
       setRoomToDelete(null);

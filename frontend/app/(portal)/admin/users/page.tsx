@@ -140,8 +140,10 @@ export default function AdminStaffPage() {
         is_active: cActive,
       });
       setCreateOpen(false);
+      toast.success("Staff account created successfully");
       await load();
     } catch (e: any) {
+      toast.error(e?.response?.data?.message || e.message || "Failed to create staff.");
       setError(e?.response?.data?.message || e.message || "Failed to create staff.");
     } finally {
       setBusy(false);
@@ -158,8 +160,10 @@ export default function AdminStaffPage() {
     setError("");
     try {
       await AdminService.deleteUser(userToDelete.user_code);
+      toast.success("Staff account deleted successfully");
       await load();
     } catch (e: any) {
+      toast.error(e?.response?.data?.message || e.message || "Failed to delete staff.");
       setError(e?.response?.data?.message || e.message || "Failed to delete staff.");
     } finally {
       setBusy(false);
@@ -187,8 +191,10 @@ export default function AdminStaffPage() {
         is_active: uActive,
       });
       setUpdateOpen(false);
+      toast.success("Staff account updated successfully");
       await load();
     } catch (e: any) {
+      toast.error(e?.response?.data?.message || e.message || "Failed to update staff.");
       setError(e?.response?.data?.message || e.message || "Failed to update staff.");
     } finally {
       setBusy(false);

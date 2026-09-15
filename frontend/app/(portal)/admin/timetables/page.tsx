@@ -8,6 +8,7 @@ import { AdminCourse, AdminRoom, AdminService, AdminTimeTableRow, AdminUser, Tea
 import { Plus, Search, Trash2, Pencil, RefreshCw, X, Clock, GraduationCap, AlertCircle, Calendar } from "lucide-react";
 import ConfirmModal from "@/components/ConfirmModal";
 import { TableBodySkeleton } from "@/components/ui/Skeleton";
+import { toast } from "sonner";
 
 function Modal({
   title,
@@ -355,9 +356,12 @@ export default function AdminTimetablesPage() {
         )
       );
       setCreateOpen(false);
+      toast.success("Timetable slot(s) created successfully");
       await load();
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.response?.data?.message || "Failed to create timetable");
+      const msg = e?.response?.data?.detail || e?.response?.data?.message || "Failed to create timetable";
+      toast.error(msg);
+      setError(msg);
     } finally {
       setBusy(false);
     }
@@ -399,9 +403,12 @@ export default function AdminTimetablesPage() {
       });
       setEditOpen(false);
       setSelected(null);
+      toast.success("Timetable slot updated successfully");
       await load();
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.response?.data?.message || "Failed to update timetable");
+      const msg = e?.response?.data?.detail || e?.response?.data?.message || "Failed to update timetable";
+      toast.error(msg);
+      setError(msg);
     } finally {
       setBusy(false);
     }
@@ -417,9 +424,12 @@ export default function AdminTimetablesPage() {
     setError("");
     try {
       await AdminService.deleteTimetable(ttToDelete.timetable_id);
+      toast.success("Timetable slot deleted successfully");
       await load();
     } catch (e: any) {
-      setError(e?.response?.data?.detail || e?.response?.data?.message || "Failed to delete timetable");
+      const msg = e?.response?.data?.detail || e?.response?.data?.message || "Failed to delete timetable";
+      toast.error(msg);
+      setError(msg);
     } finally {
       setBusy(false);
       setTtToDelete(null);

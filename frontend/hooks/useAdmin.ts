@@ -153,7 +153,11 @@ export function useDeleteUser() {
   return useMutation({
     mutationFn: (code: string) => AdminService.deleteUser(code),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: adminKeys.all });
+      queryClient.invalidateQueries({ queryKey: adminKeys.students() });
+      queryClient.invalidateQueries({ queryKey: adminKeys.teachers() });
+      queryClient.invalidateQueries({ queryKey: adminKeys.parents() });
+      queryClient.invalidateQueries({ queryKey: adminKeys.users() });
+      queryClient.invalidateQueries({ queryKey: adminKeys.enrollments() });
     },
   });
 }
@@ -163,7 +167,8 @@ export function useCreateStudent() {
   return useMutation({
     mutationFn: (payload: any) => AdminService.createStudent(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: adminKeys.all });
+      queryClient.invalidateQueries({ queryKey: adminKeys.students() });
+      queryClient.invalidateQueries({ queryKey: adminKeys.enrollments() });
     },
   });
 }
@@ -173,7 +178,7 @@ export function useDeleteActivityLog() {
   return useMutation({
     mutationFn: (id: number) => AdminService.deleteActivityLog(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: adminKeys.all });
+      queryClient.invalidateQueries({ queryKey: adminKeys.activityLogs() });
     },
   });
 }
@@ -183,7 +188,7 @@ export function useClearActivityLogs() {
   return useMutation({
     mutationFn: () => AdminService.clearAllActivityLogs(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: adminKeys.all });
+      queryClient.invalidateQueries({ queryKey: adminKeys.activityLogs() });
     },
   });
 }
@@ -194,7 +199,10 @@ export function useUpdateUser() {
     mutationFn: ({ code, payload }: { code: string; payload: any }) =>
       AdminService.updateUser(code, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: adminKeys.all });
+      queryClient.invalidateQueries({ queryKey: adminKeys.students() });
+      queryClient.invalidateQueries({ queryKey: adminKeys.teachers() });
+      queryClient.invalidateQueries({ queryKey: adminKeys.parents() });
+      queryClient.invalidateQueries({ queryKey: adminKeys.users() });
     },
   });
 }
@@ -204,7 +212,7 @@ export function useMarkAttendance() {
   return useMutation({
     mutationFn: (payload: any) => AdminService.markAttendance(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: adminKeys.all });
+      queryClient.invalidateQueries({ queryKey: adminKeys.attendance() });
     },
   });
 }
@@ -214,7 +222,7 @@ export function useUpdateAttendance() {
   return useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: any }) => AdminService.updateAttendance(id, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: adminKeys.all });
+      queryClient.invalidateQueries({ queryKey: adminKeys.attendance() });
     },
   });
 }
@@ -224,7 +232,7 @@ export function useCreateCourse() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: any) => AdminService.createCourse(payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.all }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.courses() }),
   });
 }
 
@@ -232,7 +240,7 @@ export function useUpdateCourse() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ code, payload }: { code: string; payload: any }) => AdminService.updateCourse(code, payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.all }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.courses() }),
   });
 }
 
@@ -240,7 +248,7 @@ export function useDeleteCourse() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (code: string) => AdminService.deleteCourse(code),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.all }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.courses() }),
   });
 }
 
@@ -250,7 +258,6 @@ export function useCreateEnrollment() {
   return useMutation({
     mutationFn: (payload: any) => AdminService.createEnrollment(payload),
     onSuccess: () => {
-      // Only invalidate enrollment and payment caches — not rooms, timetables, users etc.
       queryClient.invalidateQueries({ queryKey: adminKeys.enrollments() });
       queryClient.invalidateQueries({ queryKey: adminKeys.payments() });
     },
@@ -284,7 +291,10 @@ export function useCreatePayment() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: any) => AdminService.createPayment(payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.all }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: adminKeys.payments() });
+      queryClient.invalidateQueries({ queryKey: adminKeys.enrollments() });
+    },
   });
 }
 
@@ -293,7 +303,10 @@ export function useApproveStudent() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: any }) => AdminService.approveStudent(id, payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.all }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: adminKeys.students() });
+      queryClient.invalidateQueries({ queryKey: adminKeys.enrollments() });
+    },
   });
 }
 
@@ -302,7 +315,7 @@ export function useCreateAcademicYear() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: any) => AdminService.createAcademicYear(payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.all }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.academicYears() }),
   });
 }
 
@@ -310,7 +323,7 @@ export function useUpdateAcademicYear() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: any }) => AdminService.updateAcademicYear(id, payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.all }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.academicYears() }),
   });
 }
 
@@ -318,7 +331,7 @@ export function useDeleteAcademicYear() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => AdminService.deleteAcademicYear(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.all }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.academicYears() }),
   });
 }
 
@@ -327,7 +340,7 @@ export function useCreateBatch() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: any) => AdminService.createBatch(payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.all }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [...adminKeys.all, "batches"] }),
   });
 }
 
@@ -335,7 +348,7 @@ export function useUpdateBatch() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: any }) => AdminService.updateBatch(id, payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.all }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [...adminKeys.all, "batches"] }),
   });
 }
 
@@ -343,7 +356,7 @@ export function useDeleteBatch() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => AdminService.deleteBatch(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.all }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [...adminKeys.all, "batches"] }),
   });
 }
 
@@ -352,7 +365,7 @@ export function useCreateSubject() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: any) => AdminService.createSubject(payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.all }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [...adminKeys.all, "subjects"] }),
   });
 }
 
@@ -360,7 +373,7 @@ export function useUpdateSubject() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: any }) => AdminService.updateSubject(id, payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.all }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [...adminKeys.all, "subjects"] }),
   });
 }
 
@@ -368,7 +381,7 @@ export function useDeleteSubject() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => AdminService.deleteSubject(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.all }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [...adminKeys.all, "subjects"] }),
   });
 }
 
@@ -376,7 +389,9 @@ export function useCreateParent() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: any) => AdminService.createParent(payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.all }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: adminKeys.parents() });
+    },
   });
 }
 
@@ -385,7 +400,10 @@ export function useLinkParentChild() {
   return useMutation({
     mutationFn: ({ parentCode, payload }: { parentCode: string; payload: any }) =>
       AdminService.linkParentChild(parentCode, payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.all }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: adminKeys.parents() });
+      queryClient.invalidateQueries({ queryKey: adminKeys.students() });
+    },
   });
 }
 
@@ -394,7 +412,7 @@ export function useEndBatch() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (batchId: number) => AdminService.endBatch(batchId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.all }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [...adminKeys.all, "batches"] }),
   });
 }
 
