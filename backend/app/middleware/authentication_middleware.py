@@ -21,7 +21,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             response.headers["X-Request-ID"] = request_id
             return response
 
-        if request.url.path in settings.EXCLUDED_PATHS:
+        if request.url.path in settings.EXCLUDED_PATHS or request.url.path.startswith("/auth/esign/"):
             response = await call_next(request)
             response.headers["X-Request-ID"] = request_id
             return response

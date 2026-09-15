@@ -1,4 +1,4 @@
-from pydantic import BaseModel , validator
+from pydantic import BaseModel, field_validator
 from typing import Optional
 from datetime import date
 
@@ -19,7 +19,8 @@ class UserBase(BaseModel):
     how_did_you_hear: Optional[str] = None
     student_type: Optional[str] = None
     
-    @validator('password')
+    @field_validator('password')
+    @classmethod
     def password_length(cls, v):
         if len(v) < 6:
             raise ValueError('Password must be at least 6 characters long')
@@ -74,6 +75,8 @@ class AdminStudentCreate(BaseModel):
     payment_plan: Optional[str] = None
     downpayment: Optional[float] = None
     installment_amount: Optional[float] = None
+    total_fee: Optional[float] = None
+    exam_fee_gbp: Optional[float] = None
 
     
     # Division
@@ -86,7 +89,8 @@ class AdminStudentCreate(BaseModel):
     how_did_you_hear: Optional[str] = None
     student_type: Optional[str] = None
 
-    @validator('password')
+    @field_validator('password')
+    @classmethod
     def password_length(cls, v):
         if v is not None and len(v) < 6:
             raise ValueError('Password must be at least 6 characters long')
@@ -100,7 +104,8 @@ class AdminParentCreate(BaseModel):
     date_of_birth: date
     is_active: Optional[bool] = True
 
-    @validator('password')
+    @field_validator('password')
+    @classmethod
     def password_length(cls, v):
         if len(v) < 6:
             raise ValueError('Password must be at least 6 characters long')
@@ -114,13 +119,15 @@ class AdminStaffCreate(BaseModel):
     role: str
     is_active: Optional[bool] = True
 
-    @validator('password')
+    @field_validator('password')
+    @classmethod
     def password_length(cls, v):
         if len(v) < 6:
             raise ValueError('Password must be at least 6 characters long')
         return v
         
-    @validator('role')
+    @field_validator('role')
+    @classmethod
     def validate_role(cls, v):
         if v not in ['sales', 'hr', 'manager', 'teacher', 'accountant', 'student_affairs']:
             raise ValueError('Role must be sales, hr, manager, teacher, accountant, or student_affairs')
@@ -164,7 +171,8 @@ class UserPasswordChange(BaseModel):
     old_password: str
     new_password: str
 
-    @validator('new_password')
+    @field_validator('new_password')
+    @classmethod
     def password_length(cls, v):
         if len(v) < 6:
             raise ValueError('Password must be at least 6 characters long')
@@ -173,8 +181,10 @@ class UserPasswordChange(BaseModel):
 class AdminUserPasswordChange(BaseModel):
     new_password: str
 
-    @validator('new_password')
+    @field_validator('new_password')
+    @classmethod
     def password_length(cls, v):
         if len(v) < 6:
             raise ValueError('Password must be at least 6 characters long')
         return v
+

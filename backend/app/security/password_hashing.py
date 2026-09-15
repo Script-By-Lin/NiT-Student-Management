@@ -1,11 +1,20 @@
 # Password hashing utilities
-from passlib.context import CryptContext
+import bcrypt
 
-password_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 async def hash_password(password: str) -> str:
-    return password_context.hash(password[:72])
-    
+    pwd_bytes = password.encode("utf-8")[:72]
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(pwd_bytes, salt)
+    return hashed.decode("utf-8")
+
+
 async def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return password_context.verify(plain_password, hashed_password)
+    try:
+        pwd_bytes = plain_password.encode("utf-8")[:72]
+        hash_bytes = hashed_password.encode("utf-8")
+        return bcrypt.checkpw(pwd_bytes, hash_bytes)
+    except Exception:
+        return False
+
     

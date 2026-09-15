@@ -47,3 +47,31 @@ def test_student_register_schema_requires_all_fields():
     }
     with pytest.raises(ValidationError):
         StudentRegister(**incomplete_payload)
+
+@pytest.mark.asyncio
+async def test_password_hashing_and_verification():
+    from app.security.password_hashing import hash_password, verify_password
+    plain = "SuperSecurePassword123!"
+    hashed = await hash_password(plain)
+    assert hashed.startswith("$2b$")
+    assert await verify_password(plain, hashed) is True
+    assert await verify_password("WrongPassword!", hashed) is False
+
+def test_admin_student_create_schema():
+    from app.schemas.user import AdminStudentCreate
+    payload = {
+        "username": "Admin Created Student",
+        "email": "admin_student@example.com",
+        "date_of_birth": "2004-03-20",
+        "course_code": "CRS0001",
+        "total_fee": 500000.0,
+        "exam_fee_gbp": 150.0,
+        "payment_plan": "installment",
+        "downpayment": 200000.0,
+        "installment_amount": 100000.0
+    }
+    student = AdminStudentCreate(**payload)
+    assert student.total_fee == 500000.0
+    assert student.exam_fee_gbp == 150.0
+    assert student.course_code == "CRS0001"
+
